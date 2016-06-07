@@ -3,11 +3,12 @@ package com.example.justin.estimotesdkexplorer;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import com.estimote.sdk.BeaconManager;
 import com.estimote.sdk.SystemRequirementsChecker;
+import com.estimote.sdk.Utils;
 import com.estimote.sdk.eddystone.Eddystone;
 
 import java.util.ArrayList;
@@ -18,11 +19,6 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity {
 
     private BeaconManager beaconManager;
-    private Map<String, Eddystone> beaconMap;
-    private List<Eddystone> beaconList;
-
-    private ListView listView;
-    private ArrayAdapter<String> listAdapter;
 
     /** Scan ID of Eddystone scanner */
     String scanId;
@@ -33,31 +29,30 @@ public class MainActivity extends AppCompatActivity {
     /** Flag to indicate service ready */
     boolean serviceReady;
 
+    /** Views for Activity */
+    TextView macAddressTextView;
+    TextView distanceTextView;
+    TextView proximityTextView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        beaconMap = new HashMap<>();
-        beaconList = new ArrayList<>();
-
-        listView = (ListView) findViewById(R.id.listView);
-        listAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
-        listView.setAdapter(listAdapter);
+        macAddressTextView = (TextView) findViewById(R.id.macAddressTextView);
+        distanceTextView = (TextView) findViewById(R.id.distanceTextView);
+        proximityTextView = (TextView) findViewById(R.id.proximityTextView);
 
         beaconManager = new BeaconManager(getApplicationContext());
         beaconManager.setEddystoneListener(new BeaconManager.EddystoneListener() {
             @Override
             public void onEddystonesFound(List<Eddystone> list) {
-                for (Eddystone eddystone : list) {
-                    String macAddress = eddystone.macAddress.toStandardString();
-                    if (!beaconMap.containsKey(macAddress)) {
-                        beaconMap.put(macAddress, eddystone);
-                        beaconList.add(eddystone);
-
-                        listAdapter.add(macAddress);
-                    }
+                if (!list.isEmpty()) {
+                    macAddressTextView.setText(list.get(0).macAddress.toStandardString());
+                    distanceTextView.setText(String.valueOf(Utils.computeAccuracy(list.get(0))));
+                    proximityTextView.setText(String.valueOf(Utils.computeProximity(list.get(0))));
                 }
+
             }
         });
 
@@ -88,6 +83,13 @@ public class MainActivity extends AppCompatActivity {
         if (scanning) {
             stopScanning();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        beaconManager.disconnect();
     }
 
     private void startScanning() {
